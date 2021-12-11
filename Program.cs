@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using Agenda.db;
 
 namespace Agenda
 {
@@ -68,37 +70,171 @@ namespace Agenda
 
         static void ListarTodosContatos()
         {
-            Console.WriteLine("- Listar todos os contatos:");
+            Console.WriteLine("- Todos os contatos:");
 
-            // Continue daqui
+            using (var agenda = new agendaContext())
+            {
+                int qtdDeContatos = agenda.contatos.Count();
+
+                if (qtdDeContatos == 0)
+                {
+                    Console.WriteLine("Nenhum contato cadastrado.");
+                    return;
+                }
+
+                Console.WriteLine($"{qtdDeContatos} contato(s) cadastrado(s):");
+
+                foreach (var contato in agenda.contatos)
+                {
+                    Console.WriteLine($"{contato.Id}: {contato.Nome}, {contato.Fone}, {contato.Estrelas} estrelas.");
+                }
+            }
         }
 
         static void Top5Contatos()
         {
             Console.WriteLine("- Top 5 contatos:");
 
-            // Continue daqui
+            using (var agenda = new agendaContext())
+            {
+                int qtdDeContatos = agenda.Contatos.Count();
+
+                if (qtdDeContatos == 0)
+                {
+                    Console.WriteLine("Nenhum contato cadastrado.");
+                    return;
+                }
+
+                Console.WriteLine($"{qtdDeContatos} contato(s) cadastrado(s):");
+
+                var top5Contatos = agenda.Contatos
+                    .OrderByDescending(c => c.Estrelas)
+                    .Take(5);
+
+                int posicao = 0;
+                foreach (var contato in top5Contatos)
+                {
+                    posicao += 1;
+                    Console.WriteLine($"#{posicao} = {contato.Id}: {contato.Nome}, {contato.Fone}, {contato.Estrelas} estrelas.");
+                }
+            }
         }
 
         static void ConsultarContatosPorCodigo()
         {
             Console.WriteLine("- Consultar contatos por Código:");
 
-            // Continue daqui
+            Console.Write("Código: ");
+            string codigoDigitado = Console.ReadLine();
+
+            int codigoABuscar;
+            bool ehNumero = Int32.TryParse(codigoDigitado, out codigoABuscar);
+
+            if (!ehNumero)
+            {
+                Console.WriteLine("Código numérico inválido.");
+                return;
+            }
+
+            using (var agenda = new agendaContext())
+            {
+                var contato = agenda.Contatos
+                    .SingleOrDefault(c => c.Id == codigoABuscar);
+
+                if (contato is null)
+                {
+                    Console.WriteLine($"Nenhum contato com código {codigoABuscar} encontrado.");
+                }
+                else
+                {
+                    Console.WriteLine($"{contato.Id}: {contato.Nome}, {contato.Fone}, {contato.Estrelas} estrelas.");
+                }
+            }
         }
 
         static void ConsultarContatosPorNome()
         {
             Console.WriteLine("- Consultar contatos por Nome:");
 
-            // Continue daqui
+            Console.Write("Nome (ou parte do nome): ");
+            string nomeABuscar = Console.ReadLine().Trim();
+
+            using (var agenda = new agendaContext())
+            {
+                var contatosFiltrados = agenda.Contatos
+                    .Where(c => c.Nome.Contains(nomeABuscar));
+
+                int qtdEncontrada = contatosFiltrados.Count();
+
+                if (qtdEncontrada == 0)
+                {
+                    Console.WriteLine($"Nenhum contato encontrado contendo \"{nomeABuscar}\" no nome.");
+                    return;
+                }
+
+                Console.WriteLine($"{qtdEncontrada} contato(s) cadastrado(s):");
+
+                foreach (var contato in contatosFiltrados)
+                {
+                    Console.WriteLine($"{contato.Id}: {contato.Nome}, {contato.Fone}, {contato.Estrelas} estrelas.");
+                }
+            }
         }
 
         static void IncluirContato()
         {
             Console.WriteLine("- Incluir contato:");
 
-            // Continue daqui
+            Console.Write("Nome......: ");
+            string nomeDesejado = Console.ReadLine().Trim();
+
+            if (nomeDesejado == String.Empty)
+            {
+                Console.WriteLine("Nome requerido.");
+                return;
+            }
+
+            using (var agenda = new agendaContext())
+            {
+                var contatoComNomeDesejado = agenda.Contatos
+                    .SingleOrDefault(c => c.Nome == nomeDesejado);
+
+                if (contatoComNomeDesejado is not null)
+                {
+                    Console.WriteLine($"Contato existente com o nome indicado: {contatoComNomeDesejado.Id}.");
+                    return;
+                }
+            }
+
+            Console.Write("Fone......: ");
+            string fone = Console.ReadLine().Trim();
+
+            Console.Write("Estrelas..: ");
+            string estrelasDigitado = Console.ReadLine().Trim();
+
+            int estrelas = 0;
+            Int32.TryParse(estrelasDigitado, out estrelas);
+
+            if (estrelas < 0 || estrelas > 5)
+            {
+                Console.WriteLine("Estrelas deve ser um número entre 0 e 5.");
+                return;
+            }
+
+            var novoContato = new Contato
+            {
+                Nome = nomeDesejado,
+                Fone = fone,
+                Estrelas = estrelas,
+            };
+
+            using (var agenda = new agendaContext())
+            {
+                agenda.Contatos.Add(novoContato);
+                agenda.SaveChanges();
+
+                Console.WriteLine($"{novoContato.Id}: {novoContato.Nome}, {novoContato.Fone}, {novoContato.Estrelas} estrelas.");
+            }
         }
     }
 }
